@@ -9,14 +9,16 @@
 <script>
     function isBrowserSupported() {
         var test = function (regexp) { return regexp.test(window.navigator.userAgent) }
-        let isBrowserSupported = false
-        if (test(/edg/i) || test(/firefox|fxios/i) || test(/chrome|chromium|crios/i) || test(/safari/i)) {
-            isBrowserSupported = true;
+        switch (true) {
+            case test(/edg/i): return true;
+            case test(/firefox|fxios/i): return true;
+            case test(/chrome|chromium|crios/i): return true;
+            case test(/safari/i): return true;
+            default: return false;
         }
-        return isBrowserSupported && !test(/opr/i)
     }
     let heading = document.getElementById('browser');
-    heading.innerText = isBrowserSupported() + `, ${navigator.userAgent}`;
+    heading.innerText = isBrowserSupported()+`, ${navigator.userAgent}`;
 </script>
 
 </html>
