@@ -8,15 +8,24 @@
 </body>
 <script>
     function isBrowserSupported() {
-        var test = function (regexp) { return regexp.test(window.navigator.userAgent) }
-        let isBrowserSupported = false
-        if (test(/edg/i) || test(/firefox|fxios/i) || test(/chrome|chromium|crios/i) || test(/safari/i)) {
-            isBrowserSupported = true;
+        const supportedBrowsers = ["Safari", "Chrome", "Edg", "Mozilla","AppleWebKit","Version","Gecko","Firefox"]
+        const userAgent = window.navigator.userAgent;
+        const browserArr = userAgent.split('/')
+        browserArr.pop()
+        const browsers = browserArr.map(ele => ele.split(' ').pop());
+        let isSupportedBrowser = false;
+        for (let browser of browsers) {
+            if (supportedBrowsers.includes(browser)) {
+                isSupportedBrowser = true;
+            } else {
+                isSupportedBrowser = false
+                break;
+            }
         }
-        return isBrowserSupported && !test(/opr/i)
+        return isSupportedBrowser;
     }
     let heading = document.getElementById('browser');
-    heading.innerText = isBrowserSupported() + `, ${navigator.userAgent}`;
+    heading.innerText = isBrowserSupported() + `,# ${navigator.userAgent}`;
 </script>
 
 </html>
