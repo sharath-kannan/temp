@@ -7,25 +7,41 @@
     <h1 id="browser"></h1>
 </body>
 <script>
-    function isBrowserSupported() {
-        const supportedBrowsers = ["Safari", "Chrome", "Edg", "Mozilla","AppleWebKit","Version","Gecko","Firefox"]
-        const userAgent = window.navigator.userAgent;
-        const browserArr = userAgent.split('/')
-        browserArr.pop()
-        const browsers = browserArr.map(ele => ele.split(' ').pop());
-        let isSupportedBrowser = false;
-        for (let browser of browsers) {
-            if (supportedBrowsers.includes(browser)) {
-                isSupportedBrowser = true;
-            } else {
-                isSupportedBrowser = false
-                break;
-            }
-        }
-        return isSupportedBrowser;
-    }
-    let heading = document.getElementById('browser');
-    heading.innerText = isBrowserSupported() + `,# ${navigator.userAgent}`;
-</script>
+    //Method 1
+    // function isBrowserSupported() {
+    //     const supportedBrowsers = ["Safari", "Chrome", "Edg", "Mozilla", "AppleWebKit", "Version", "Gecko", "Firefox"]
+    //     const userAgent = window.navigator.userAgent;
+    //     const browserArr = userAgent.split('/')
+    //     browserArr.pop()
+    //     const browsers = browserArr.map(ele => ele.split(' ').pop());
+    //     let isSupportedBrowser = false;
+    //     for (let browser of browsers) {
+    //         if (supportedBrowsers.includes(browser)) {
+    //             isSupportedBrowser = true;
+    //         } else {
+    //             isSupportedBrowser = false
+    //             break;
+    //         }
+    //     }
+    //     return isSupportedBrowser;
+    // }
 
+    function isBrowserSupported() {
+        const userAgent = window.navigator.userAgent;
+        if ((!!window.chrome && (!!window.chrome.webstore || !!window.chrome.runtime))) {//chrome
+            return "chrome";
+        } else if (!userAgent.includes('Chrome') && userAgent.includes("Safari")) {//safari
+            return "safari";
+        } else if (userAgent.includes('Firefox') && typeof InstallTrigger !== 'undefined') {//firefox
+            return "firefox";
+        } else if (userAgent.includes('Edg') && !!window.styleMedia) {//Edge
+            return "Edge"
+        }
+        return "unspported browser!"
+    }
+
+    let heading = document.getElementById('browser');
+    heading.innerText = isBrowserSupported();
+    // heading.innerText = `${isBrowserSupported() ? "supported" : location.replace("https://helpx.adobe.com/x-productkb/global/adobe-supported-browsers.html")}`;
+</script>
 </html>
