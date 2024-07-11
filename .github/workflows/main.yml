@@ -28,5 +28,5 @@ jobs:
       with:
         github-token: ${{ steps.milo-pr-merge-token.outputs.token }}
         script: |
-          const main = require('./.github/workflows/merge-to-main.js')
+          const main = require('./.github/workflows/merge-to-stage.js')
           main({ github, context })
