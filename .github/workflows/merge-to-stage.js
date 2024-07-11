@@ -1,4 +1,4 @@
-const STAGE = 'stage';
+const STAGE = 'main';
 const main = async (params) => {
   github = params.github;
   owner = params.context.repo.owner;
