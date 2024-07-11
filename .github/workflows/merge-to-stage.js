@@ -4,6 +4,10 @@ const main = async (params) => {
   repo = params.context.repo.repo;
   console.log("owner",owner);
   console.log("repo",repo);
+  let prs = await github.rest.pulls
+    .list({ owner, repo, state: 'open', per_page: 100, base: STAGE })
+    .then(({ data }) => data);
+  console.log(prs);
 };
 
 console.log(process.env.LOCAL_RUN);
