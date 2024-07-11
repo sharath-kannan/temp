@@ -2,7 +2,7 @@ name: Merge to stage
 on:
   push:
     branches:
-    - test
+    - main
   workflow_dispatch: #run manually
 jobs:
   log_time:
