@@ -22,4 +22,11 @@ jobs:
         
     - name: Checkout repository
       uses: actions/checkout@v4
-    - run: echo ${{ steps.milo-pr-merge-token.outputs.token }}
+   
+    - name: Merge to main
+      uses: actions/github-script@v7
+      with:
+        github-token: ${{ steps.milo-pr-merge-token.outputs.token }}
+        script: |
+          const main = require('./.github/workflows/merge-to-main.js')
+          main({ github, context })
