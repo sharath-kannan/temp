@@ -51,6 +51,13 @@ const commentOnPR = async (comment, prNumber) => {
     body: comment,
   });
 };
+
+const hasFailingChecks = (checks) =>
+  checks.some(
+    ({ conclusion, name }) =>
+      name !== 'merge-to-stage' && conclusion === 'failure'
+  );
+
 const main = async (params) => {
   github = params.github;
   owner = params.context.repo.owner;
