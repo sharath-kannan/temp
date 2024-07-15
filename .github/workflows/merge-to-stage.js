@@ -1,6 +1,7 @@
 const STAGE = 'main';
 const SEEN = {};
 let github, owner, repo;
+const REQUIRED_APPROVALS = process.env.REQUIRED_APPROVALS || 2;
 
 const getChecks = ({ pr, github, owner, repo }) =>
   github.rest.checks
