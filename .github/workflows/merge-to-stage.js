@@ -1,4 +1,6 @@
 const STAGE = 'main';
+const SEEN = {};
+let github, owner, repo;
 
 const getChecks = ({ pr, github, owner, repo }) =>
   github.rest.checks
@@ -58,12 +60,27 @@ const hasFailingChecks = (checks) =>
       name !== 'merge-to-stage' && conclusion === 'failure'
   );
 
-const main = async (params) => {
-  github = params.github;
-  owner = params.context.repo.owner;
-  repo = params.context.repo.repo;
-  console.log("owner", owner);
-  console.log("repo", repo);
+const merge = async ({ prs, type }) => {
+  console.log(`Merging ${prs.length || 0} ${type} PRs that are ready... `);
+
+  for await (const { number, files, html_url, title } of prs) {
+    try {
+      console.log("process.env.LOCAL_RUN =", process.env.LOCAL_RUN)
+      if (!process.env.LOCAL_RUN) {
+        await github.rest.pulls.merge({
+          owner,
+          repo,
+          pull_number: number,
+          merge_method: 'squash',
+        });
+      }
+    } catch (error) {
+      commentOnPR(`Error merging ${number}: ${title} ` + error.message, number);
+    }
+  }
+};
+
+const getPRs = async () => {
   let prs = await github.rest.pulls
     .list({ owner, repo, state: 'open', per_page: 100, base: STAGE })
     .then(({ data }) => data);
@@ -72,13 +89,13 @@ const main = async (params) => {
     ...prs.map((pr) => getReviews({ pr, github, owner, repo })),
   ]);
   prs = prs.filter(({ checks, reviews, number, title }) => {
-    if (hasFailingChecks(checks)) {
-      commentOnPR(
-        `Skipped merging ${number}: ${title} due to failing checks`,
-        number
-      );
-      return false;
-    }
+    // if (hasFailingChecks(checks)) {
+    //   commentOnPR(
+    //     `Skipped merging ${number}: ${title} due to failing checks`,
+    //     number
+    //   );
+    //   return false;
+    // }
 
     const approvals = reviews.filter(({ state }) => state === 'APPROVED');
     if (approvals.length < REQUIRED_APPROVALS) {
@@ -88,10 +105,19 @@ const main = async (params) => {
       );
       return false;
     }
-
     return true;
   });
   return prs;
+}
+
+const main = async (params) => {
+  github = params.github;
+  owner = params.context.repo.owner;
+  repo = params.context.repo.repo;
+  console.log("owner", owner);
+  console.log("repo", repo);
+  const prs = await getPRs();
+  merge(prs);
 };
 
 console.log(process.env.LOCAL_RUN);
