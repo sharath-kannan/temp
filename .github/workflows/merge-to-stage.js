@@ -61,8 +61,8 @@ const hasFailingChecks = (checks) =>
       name !== 'merge-to-stage' && conclusion === 'failure'
   );
 
-const merge = async ({ prs, type }) => {
-  console.log(`Merging ${prs.length || 0} ${type} PRs that are ready... `);
+const merge = async (prs) => {
+  console.log(`Merging ${prs.length || 0}`);
 
   for await (const { number, files, html_url, title } of prs) {
     try {
