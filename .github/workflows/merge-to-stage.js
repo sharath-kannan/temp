@@ -102,6 +102,7 @@ const merge = async ({ prs, type }) => {
       }
     } catch (error) {
       commentOnPR(`Error merging ${number}: ${title} ` + error.message, number);
+      files.forEach((file) => (SEEN[file] = false));
     }
   }
 };
