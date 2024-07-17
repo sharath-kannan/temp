@@ -1,4 +1,13 @@
 const STAGE = 'main';
+const SEEN = {};
+let github, owner, repo;
+const REQUIRED_APPROVALS = process.env.REQUIRED_APPROVALS || 1;
+const LABELS = {
+  highPriority: 'high priority',
+  readyForStage: 'Ready for Stage',
+  SOTPrefix: 'SOT',
+  zeroImpact: 'zero-impact',
+};
 
 const getChecks = ({ pr, github, owner, repo }) =>
   github.rest.checks
@@ -58,27 +67,62 @@ const hasFailingChecks = (checks) =>
       name !== 'merge-to-stage' && conclusion === 'failure'
   );
 
-const main = async (params) => {
-  github = params.github;
-  owner = params.context.repo.owner;
-  repo = params.context.repo.repo;
-  console.log("owner", owner);
-  console.log("repo", repo);
+const addFiles = ({ pr, github, owner, repo }) =>
+  github.rest.pulls
+    .listFiles({ owner, repo, pull_number: pr.number })
+    .then(({ data }) => {
+      pr.files = data.map(({ filename }) => filename);
+      return pr;
+    });
+
+const merge = async ({ prs, type }) => {
+  console.log(`Merging ${prs.length || 0} ${type} PRs that are ready... `);
+
+  for await (const { number, files, html_url, title } of prs) {
+    try {
+      if (files.some((file) => SEEN[file])) {
+        commentOnPR(
+          `Skipped ${number}: ${title} due to file overlap. Merging will be attempted in the next batch`,
+          number
+        );
+        continue;
+      }
+      if (type !== LABELS.zeroImpact) {
+        files.forEach((file) => (SEEN[file] = true));
+      }
+      console.log("process.env.LOCAL_RUN =", process.env.LOCAL_RUN)
+      if (!process.env.LOCAL_RUN) {
+        await github.rest.pulls.merge({
+          owner,
+          repo,
+          pull_number: number,
+          merge_method: 'squash',
+        });
+      }
+    } catch (error) {
+      commentOnPR(`Error merging ${number}: ${title} ` + error.message, number);
+    }
+  }
+};
+
+const getPRs = async () => {
   let prs = await github.rest.pulls
     .list({ owner, repo, state: 'open', per_page: 100, base: STAGE })
     .then(({ data }) => data);
   await Promise.all([
+    ...prs.map((pr) => addFiles({ pr, github, owner, repo })),
     ...prs.map((pr) => getChecks({ pr, github, owner, repo })),
     ...prs.map((pr) => getReviews({ pr, github, owner, repo })),
   ]);
   prs = prs.filter(({ checks, reviews, number, title }) => {
-    if (hasFailingChecks(checks)) {
-      commentOnPR(
-        `Skipped merging ${number}: ${title} due to failing checks`,
-        number
-      );
-      return false;
-    }
+    // if (hasFailingChecks(checks)) {
+    //   commentOnPR(
+    //     `Skipped merging ${number}: ${title} due to failing checks`,
+    //     number
+    //   );
+    //   return false;
+    // }
+
 
     const approvals = reviews.filter(({ state }) => state === 'APPROVED');
     if (approvals.length < REQUIRED_APPROVALS) {
@@ -88,13 +132,44 @@ const main = async (params) => {
       );
       return false;
     }
-
     return true;
   });
-  return prs;
+  return prs.reverse().reduce(
+    (categorizedPRs, pr) => {
+      if (pr.labels.includes(LABELS.zeroImpact)) {
+        categorizedPRs.zeroImpactPRs.push(pr);
+      } else if (pr.labels.includes(LABELS.highPriority)) {
+        categorizedPRs.highImpactPRs.push(pr);
+      } else {
+        categorizedPRs.normalPRs.push(pr);
+      }
+      return categorizedPRs;
+    },
+    { zeroImpactPRs: [], highImpactPRs: [], normalPRs: [] }
+  );
+}
+
+const main = async (params) => {
+  github = params.github;
+  owner = params.context.repo.owner;
+  repo = params.context.repo.repo;
+  try {
+    const stageToMainPR = undefined;
+    console.log("owner", owner);
+    console.log("repo", repo);
+    const { zeroImpactPRs, highImpactPRs, normalPRs } = await getPRs();
+    await merge({ prs: zeroImpactPRs, type: LABELS.zeroImpact });
+    if (stageToMainPR?.labels.some((label) => label.includes(LABELS.SOTPrefix)))
+      return console.log('PR exists & testing started. Stopping execution.');
+    await merge({ prs: highImpactPRs, type: LABELS.highPriority });
+    await merge({ prs: normalPRs, type: 'normal' });
+    //create or merge to existing PR.
+    console.log('Process successfully executed.');
+  } catch (err) {
+    console.error(err);
+  }
 };
 
-console.log(process.env.LOCAL_RUN);
 if (process.env.LOCAL_RUN) {
   const { github, context } = getLocalConfigs();
   main({
