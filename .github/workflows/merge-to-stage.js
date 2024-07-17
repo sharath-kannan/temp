@@ -1,4 +1,4 @@
-const STAGE = 'main';
+const STAGE = 'stage';
 const SEEN = {};
 let github, owner, repo;
 const REQUIRED_APPROVALS = process.env.REQUIRED_APPROVALS || 1;
