@@ -75,11 +75,20 @@ const addFiles = ({ pr, github, owner, repo }) =>
       return pr;
     });
 
+const addLabels = ({ pr, github, owner, repo }) =>
+  github.rest.issues
+    .listLabelsOnIssue({ owner, repo, issue_number: pr.number })
+    .then(({ data }) => {
+      pr.labels = data.map(({ name }) => name);
+      return pr;
+    });
+
 const merge = async ({ prs, type }) => {
   console.log(`Merging ${prs.length || 0} ${type} PRs that are ready... `);
 
   for await (const { number, files, html_url, title } of prs) {
     try {
+      console.log(SEEN);
       if (files.some((file) => SEEN[file])) {
         commentOnPR(
           `Skipped ${number}: ${title} due to file overlap. Merging will be attempted in the next batch`,
@@ -101,6 +110,7 @@ const merge = async ({ prs, type }) => {
       }
     } catch (error) {
       commentOnPR(`Error merging ${number}: ${title} ` + error.message, number);
+      files.forEach((file) => (SEEN[file] = false));
     }
   }
 };
@@ -109,6 +119,7 @@ const getPRs = async () => {
   let prs = await github.rest.pulls
     .list({ owner, repo, state: 'open', per_page: 100, base: STAGE })
     .then(({ data }) => data);
+  await Promise.all(prs.map((pr) => addLabels({ pr, github, owner, repo })));
   await Promise.all([
     ...prs.map((pr) => addFiles({ pr, github, owner, repo })),
     ...prs.map((pr) => getChecks({ pr, github, owner, repo })),
@@ -136,6 +147,7 @@ const getPRs = async () => {
   });
   return prs.reverse().reduce(
     (categorizedPRs, pr) => {
+      console.log("PR", pr.labels)
       if (pr.labels.includes(LABELS.zeroImpact)) {
         categorizedPRs.zeroImpactPRs.push(pr);
       } else if (pr.labels.includes(LABELS.highPriority)) {

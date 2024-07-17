@@ -29,13 +29,13 @@
     function isBrowserSupported() {
         const userAgent = window.navigator.userAgent;
         if ((!!window.chrome && (!!window.chrome.webstore || !!window.chrome.runtime))) {//chrome
-            return "chrome1";
+            return "chrome2again";
         } else if (!userAgent.includes('Chrome') && userAgent.includes("Safari")) {//safari
             return "safari";
         } else if (userAgent.includes('Firefox') && typeof InstallTrigger !== 'undefined') {//firefox
             return "firefox";
         } else if (userAgent.includes('Edg') && !!window.styleMedia) {//Edge
-            return "Edge"
+            return "Edge2"
         }
         return "unspported browser!"
     }
