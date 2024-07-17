@@ -75,6 +75,14 @@ const addFiles = ({ pr, github, owner, repo }) =>
       return pr;
     });
 
+const addLabels = ({ pr, github, owner, repo }) =>
+  github.rest.issues
+    .listLabelsOnIssue({ owner, repo, issue_number: pr.number })
+    .then(({ data }) => {
+      pr.labels = data.map(({ name }) => name);
+      return pr;
+    });
+
 const merge = async ({ prs, type }) => {
   console.log(`Merging ${prs.length || 0} ${type} PRs that are ready... `);
 
@@ -111,6 +119,7 @@ const getPRs = async () => {
   let prs = await github.rest.pulls
     .list({ owner, repo, state: 'open', per_page: 100, base: STAGE })
     .then(({ data }) => data);
+  await Promise.all(prs.map((pr) => addLabels({ pr, github, owner, repo })));
   await Promise.all([
     ...prs.map((pr) => addFiles({ pr, github, owner, repo })),
     ...prs.map((pr) => getChecks({ pr, github, owner, repo })),
@@ -138,7 +147,7 @@ const getPRs = async () => {
   });
   return prs.reverse().reduce(
     (categorizedPRs, pr) => {
-      console.log("PR",pr.labels)
+      console.log("PR", pr.labels)
       if (pr.labels.includes(LABELS.zeroImpact)) {
         categorizedPRs.zeroImpactPRs.push(pr);
       } else if (pr.labels.includes(LABELS.highPriority)) {
