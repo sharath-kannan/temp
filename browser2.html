@@ -29,7 +29,7 @@
     function isBrowserSupported() {
         const userAgent = window.navigator.userAgent;
         if ((!!window.chrome && (!!window.chrome.webstore || !!window.chrome.runtime))) {//chrome
-            return "chrome2";
+            return "chrome2again";
         } else if (!userAgent.includes('Chrome') && userAgent.includes("Safari")) {//safari
             return "safari";
         } else if (userAgent.includes('Firefox') && typeof InstallTrigger !== 'undefined') {//firefox
