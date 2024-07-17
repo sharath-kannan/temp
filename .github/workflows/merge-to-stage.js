@@ -1,7 +1,7 @@
 const STAGE = 'main';
 const SEEN = {};
 let github, owner, repo;
-const REQUIRED_APPROVALS = process.env.REQUIRED_APPROVALS || 2;
+const REQUIRED_APPROVALS = process.env.REQUIRED_APPROVALS || 1;
 const LABELS = {
   highPriority: 'high priority',
   readyForStage: 'Ready for Stage',
