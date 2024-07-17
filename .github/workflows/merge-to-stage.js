@@ -138,6 +138,7 @@ const getPRs = async () => {
   });
   return prs.reverse().reduce(
     (categorizedPRs, pr) => {
+      console.log("PR",pr.labels)
       if (pr.labels.includes(LABELS.zeroImpact)) {
         categorizedPRs.zeroImpactPRs.push(pr);
       } else if (pr.labels.includes(LABELS.highPriority)) {
