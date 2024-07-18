@@ -3,6 +3,7 @@ const PROD = 'main';
 const PR_TITLE = '[Release] Stage to Main';
 const SEEN = {};
 let github, owner, repo;
+let body = '';
 const REQUIRED_APPROVALS = process.env.REQUIRED_APPROVALS || 1;
 const LABELS = {
   highPriority: 'high priority',
@@ -112,6 +113,8 @@ const merge = async ({ prs, type }) => {
           pull_number: number,
           merge_method: 'squash',
         });
+        const prefix = type === LABELS.zeroImpact ? ' [ZERO IMPACT]' : '';
+        body = `-${prefix} ${html_url}\n${body}`;
       }
     } catch (error) {
       commentOnPR(`Error merging ${number}: ${title} ` + error.message, number);
@@ -213,12 +216,24 @@ const getPRs = async () => {
   );
 }
 
+const getStageToMainPR = () =>
+  github.rest.pulls
+    .list({ owner, repo, state: 'open', base: PROD })
+    .then(({ data } = {}) => data.find(({ title } = {}) => title === PR_TITLE))
+    .then((pr) => pr && addLabels({ pr, github, owner, repo }))
+    .then((pr) => pr && addFiles({ pr, github, owner, repo }))
+    .then((pr) => {
+      pr?.files.forEach((file) => (SEEN[file] = true));
+      return pr;
+    });
+
 const main = async (params) => {
   github = params.github;
   owner = params.context.repo.owner;
   repo = params.context.repo.repo;
   try {
-    const stageToMainPR = undefined;
+    const stageToMainPR = await getStageToMainPR();
+    console.log("Stage to main PR exits", !!stageToMainPR);
     console.log("owner", owner);
     console.log("repo", repo);
     const { zeroImpactPRs, highImpactPRs, normalPRs } = await getPRs();
@@ -229,6 +244,15 @@ const main = async (params) => {
     await merge({ prs: normalPRs, type: 'normal' });
     //create or merge to existing PR.
     if (!stageToMainPR) await openStageToMainPR();
+    if (stageToMainPR && body !== stageToMainPR.body) {
+      console.log("Updating PR's body...");
+      await github.rest.pulls.update({
+        owner,
+        repo,
+        pull_number: stageToMainPR.number,
+        body: body,
+      });
+    }
     console.log('Process successfully executed.');
   } catch (err) {
     console.error(err);
