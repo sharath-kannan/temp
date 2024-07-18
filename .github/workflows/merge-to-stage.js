@@ -3,6 +3,7 @@ const PROD = 'main';
 const PR_TITLE = '[Release] Stage to Main';
 const SEEN = {};
 let github, owner, repo;
+let body = '';
 const REQUIRED_APPROVALS = process.env.REQUIRED_APPROVALS || 1;
 const LABELS = {
   highPriority: 'high priority',
