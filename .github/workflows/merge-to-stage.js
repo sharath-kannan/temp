@@ -1,4 +1,6 @@
 const STAGE = 'stage';
+const PROD = 'main';
+const PR_TITLE = '[Release] Stage to Main';
 const SEEN = {};
 let github, owner, repo;
 const REQUIRED_APPROVALS = process.env.REQUIRED_APPROVALS || 1;
@@ -8,6 +10,9 @@ const LABELS = {
   SOTPrefix: 'SOT',
   zeroImpact: 'zero-impact',
 };
+const TEAM_MENTIONS = [
+  '@adobecom/creative-cloud-sot',
+];
 
 const getChecks = ({ pr, github, owner, repo }) =>
   github.rest.checks
@@ -115,6 +120,52 @@ const merge = async ({ prs, type }) => {
   }
 };
 
+const openStageToMainPR = async () => {
+  const { data: comparisonData } = await github.rest.repos.compareCommits({
+    owner,
+    repo,
+    base: PROD,
+    head: STAGE,
+  });
+
+  for (const commit of comparisonData.commits) {
+    const { data: pullRequestData } =
+      await github.rest.repos.listPullRequestsAssociatedWithCommit({
+        owner,
+        repo,
+        commit_sha: commit.sha,
+      });
+
+    for (const pr of pullRequestData) {
+      if (!body.includes(pr.html_url)) body = `- ${pr.html_url}\n${body}`;
+    }
+  }
+
+  try {
+    const {
+      data: { html_url, number },
+    } = await github.rest.pulls.create({
+      owner,
+      repo,
+      title: PR_TITLE,
+      head: STAGE,
+      base: PROD,
+      body,
+    });
+
+    await github.rest.issues.createComment({
+      owner,
+      repo,
+      issue_number: number,
+      body: `Testing can start ${TEAM_MENTIONS.join(' ')}`,
+    });
+  } catch (error) {
+    if (error.message.includes('No commits between main and stage'))
+      return console.log('No new commits, no stage->main PR opened');
+    throw error;
+  }
+};
+
 const getPRs = async () => {
   let prs = await github.rest.pulls
     .list({ owner, repo, state: 'open', per_page: 100, base: STAGE })
@@ -176,6 +227,7 @@ const main = async (params) => {
     await merge({ prs: highImpactPRs, type: LABELS.highPriority });
     await merge({ prs: normalPRs, type: 'normal' });
     //create or merge to existing PR.
+    if (!stageToMainPR) await openStageToMainPR();
     console.log('Process successfully executed.');
   } catch (err) {
     console.error(err);
