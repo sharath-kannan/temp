@@ -232,7 +232,7 @@ const main = async (params) => {
   owner = params.context.repo.owner;
   repo = params.context.repo.repo;
   try {
-    const stageToMainPR = getStageToMainPR();
+    const stageToMainPR = await getStageToMainPR();
     console.log("Stage to main PR exits", !!stageToMainPR);
     console.log("owner", owner);
     console.log("repo", repo);
