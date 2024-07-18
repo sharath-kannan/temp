@@ -236,6 +236,7 @@ const main = async (params) => {
     console.log("Stage to main PR exits", !!stageToMainPR);
     console.log("owner", owner);
     console.log("repo", repo);
+    if (stageToMainPR) body = stageToMainPR.body;
     const { zeroImpactPRs, highImpactPRs, normalPRs } = await getPRs();
     await merge({ prs: zeroImpactPRs, type: LABELS.zeroImpact });
     if (stageToMainPR?.labels.some((label) => label.includes(LABELS.SOTPrefix)))
