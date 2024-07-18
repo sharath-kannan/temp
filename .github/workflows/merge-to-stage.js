@@ -135,8 +135,9 @@ const openStageToMainPR = async () => {
         repo,
         commit_sha: commit.sha,
       });
-
+    console.log("Value of body", body);
     for (const pr of pullRequestData) {
+      console.log(`- ${pr.html_url}\n${body}`);
       if (!body.includes(pr.html_url)) body = `- ${pr.html_url}\n${body}`;
     }
   }
