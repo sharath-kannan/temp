@@ -1,4 +1,6 @@
-const STAGE = 'main';
+const STAGE = 'stage';
+const PROD = 'main';
+const PR_TITLE = '[Release] Stage to Main';
 const SEEN = {};
 let github, owner, repo;
 const REQUIRED_APPROVALS = process.env.REQUIRED_APPROVALS || 1;
@@ -8,6 +10,9 @@ const LABELS = {
   SOTPrefix: 'SOT',
   zeroImpact: 'zero-impact',
 };
+const TEAM_MENTIONS = [
+  '@adobecom/creative-cloud-sot',
+];
 
 const getChecks = ({ pr, github, owner, repo }) =>
   github.rest.checks
@@ -75,11 +80,20 @@ const addFiles = ({ pr, github, owner, repo }) =>
       return pr;
     });
 
+const addLabels = ({ pr, github, owner, repo }) =>
+  github.rest.issues
+    .listLabelsOnIssue({ owner, repo, issue_number: pr.number })
+    .then(({ data }) => {
+      pr.labels = data.map(({ name }) => name);
+      return pr;
+    });
+
 const merge = async ({ prs, type }) => {
   console.log(`Merging ${prs.length || 0} ${type} PRs that are ready... `);
 
   for await (const { number, files, html_url, title } of prs) {
     try {
+      console.log(SEEN);
       if (files.some((file) => SEEN[file])) {
         commentOnPR(
           `Skipped ${number}: ${title} due to file overlap. Merging will be attempted in the next batch`,
@@ -101,7 +115,55 @@ const merge = async ({ prs, type }) => {
       }
     } catch (error) {
       commentOnPR(`Error merging ${number}: ${title} ` + error.message, number);
+      files.forEach((file) => (SEEN[file] = false));
     }
+  }
+};
+
+const openStageToMainPR = async () => {
+  const { data: comparisonData } = await github.rest.repos.compareCommits({
+    owner,
+    repo,
+    base: PROD,
+    head: STAGE,
+  });
+
+  for (const commit of comparisonData.commits) {
+    const { data: pullRequestData } =
+      await github.rest.repos.listPullRequestsAssociatedWithCommit({
+        owner,
+        repo,
+        commit_sha: commit.sha,
+      });
+    console.log("Value of body", body);
+    for (const pr of pullRequestData) {
+      console.log(`- ${pr.html_url}\n${body}`);
+      if (!body.includes(pr.html_url)) body = `- ${pr.html_url}\n${body}`;
+    }
+  }
+
+  try {
+    const {
+      data: { html_url, number },
+    } = await github.rest.pulls.create({
+      owner,
+      repo,
+      title: PR_TITLE,
+      head: STAGE,
+      base: PROD,
+      body,
+    });
+
+    await github.rest.issues.createComment({
+      owner,
+      repo,
+      issue_number: number,
+      body: `Testing can start ${TEAM_MENTIONS.join(' ')}`,
+    });
+  } catch (error) {
+    if (error.message.includes('No commits between main and stage'))
+      return console.log('No new commits, no stage->main PR opened');
+    throw error;
   }
 };
 
@@ -109,6 +171,7 @@ const getPRs = async () => {
   let prs = await github.rest.pulls
     .list({ owner, repo, state: 'open', per_page: 100, base: STAGE })
     .then(({ data }) => data);
+  await Promise.all(prs.map((pr) => addLabels({ pr, github, owner, repo })));
   await Promise.all([
     ...prs.map((pr) => addFiles({ pr, github, owner, repo })),
     ...prs.map((pr) => getChecks({ pr, github, owner, repo })),
@@ -136,6 +199,7 @@ const getPRs = async () => {
   });
   return prs.reverse().reduce(
     (categorizedPRs, pr) => {
+      console.log("PR", pr.labels)
       if (pr.labels.includes(LABELS.zeroImpact)) {
         categorizedPRs.zeroImpactPRs.push(pr);
       } else if (pr.labels.includes(LABELS.highPriority)) {
@@ -164,6 +228,7 @@ const main = async (params) => {
     await merge({ prs: highImpactPRs, type: LABELS.highPriority });
     await merge({ prs: normalPRs, type: 'normal' });
     //create or merge to existing PR.
+    if (!stageToMainPR) await openStageToMainPR();
     console.log('Process successfully executed.');
   } catch (err) {
     console.error(err);
