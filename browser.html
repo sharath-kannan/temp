@@ -20,7 +20,20 @@
         }
     }
     let heading = document.getElementById('browser');
-    heading.innerText = isBrowserSupported()+`, ${navigator.userAgent}`;
+    heading.innerText = isBrowserSupported() + `, ${navigator.userAgent}`;
+    function Header() {
+        (<>
+            <header>
+                <nav>
+                    <ul>
+                        <li>Pricing</li>
+                        <li>About</li>
+                        <li>Contacts</li>
+                    </ul>
+                </nav>
+            </header>
+        </>)
+    }
 </script>
 
 </html>
