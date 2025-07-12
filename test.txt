@@ -1,0 +1,33 @@
+#########################################
+# HTTP Client configuration
+#########################################
+
+# .short_desc
+# HTTP Client Configuration
+# .full_desc
+# This section contains various parameters which are related to HTTP connections.
+[httpclient]
+
+# .short_desc
+# Minimum SSL protocol version for HTTPS connections
+# .full_desc
+# Choose minimum available SSL protocol version for secured connections to HTTP endpoints
+# .type enum
+# .range ssl30,tls10,tls11,tls12,tls13,max
+# .change online
+sslMinProtocolVersion = tls12
+
+# .short_desc
+# Maximum SSL protocol version for HTTPS connections
+# .full_desc
+# Choose maximum available SSL protocol version for secured connections to HTTP endpoints
+# .type enum
+# .range ssl30,tls10,tls11,tls12,tls13,max
+# .change online
+sslMaxProtocolVersion = tls12
+
+# .full_desc
+# Enforce the usage of HTTPS
+# .type bool
+# .change online
+sslEnforce = false
